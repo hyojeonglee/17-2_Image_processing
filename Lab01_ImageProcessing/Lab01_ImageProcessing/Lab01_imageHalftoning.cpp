@@ -8,6 +8,9 @@
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+	int temp = 0;
+	int THRESHOLD = 100;
+	int Ep, Eg = 0;
 	FILE *infile;
 	infile=fopen("Mandrill_g.bmp", "rb");
 	if(infile==NULL) { printf("There is no file!!!\n"); exit(1); }
@@ -38,38 +41,33 @@ int _tmain(int argc, _TCHAR* argv[])
 	fclose(infile);
 	BYTE lpOutImg2[256][256][3];
 
-	// 작은 사각형 데이터
-	BYTE lpImg3[256][256][3];
-
 	for(int i=0; i<hInfo.biHeight; i++)
 		for(int j=0; j<hInfo.biWidth; j++) 
 			for (int c=0; c<3; c++)
-				lpImg3[i][j][c] = 255;
-	
-	for(int i=50; i<hInfo.biHeight-50; i++)
-		for(int j=50; j<hInfo.biWidth-50; j++) 
-			for (int c=0; c<3; c++)
-				lpImg3[i][j][c] = 0;
-	
-	for(int i=55; i<hInfo.biHeight-55; i++)
-		for(int j=55; j<hInfo.biWidth-55; j++) 
-			for (int c=0; c<3; c++)
-				lpImg3[i][j][c] = 255;
-	
-
+				lpOutImg2[i][j][c] = lpImg2[i][j][c];
 
 	// 코드 수정 부분
-
-	for(int i=0; i<hInfo.biHeight; i++)
-		for(int j=0; j<hInfo.biWidth; j++) 
-			for (int c=0; c<3; c++)
-				lpOutImg2[i][j][c] = lpImg2[i][j][c] * lpImg3[i][j][c];
-
-
+	for(int i=0; i<hInfo.biHeight; i++) {
+		for(int j=0; j<hInfo.biWidth; j++) {
+			Ep = Eg;
+			temp = lpImg2[i][j][0]+Ep;
+			for(int c=0; c<3; c++) {
+				if(temp > THRESHOLD) {
+					lpOutImg2[i][j][c] = 255;
+					Eg = temp - 2*THRESHOLD;
+				}
+				else {
+					lpOutImg2[i][j][c] = 0;
+					Eg = THRESHOLD;
+				}
+			}
+		}
+	}
+					
 	///////////////////////////////////////////////////////////////////
 
 	// 영상 출력 (24비트인 트루칼라로 출력) 
-	FILE *outfile = fopen("3_이효정.bmp","wb");
+	FILE *outfile = fopen("4_이효정.bmp","wb");
 	fwrite(&hf,sizeof(char),sizeof(BITMAPFILEHEADER),outfile);
 	fwrite(&hInfo,sizeof(char),sizeof(BITMAPINFOHEADER),outfile);
 	fwrite(lpOutImg2,sizeof(char),3*256*256, outfile); 
