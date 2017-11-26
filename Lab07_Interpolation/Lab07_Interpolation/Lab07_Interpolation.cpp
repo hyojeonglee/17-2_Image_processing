@@ -48,7 +48,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			for (int c = 0; c<3; c++)
 			{
 				x = double(j) / 2;
-				y = double(i) / 1;
+				y = double(i) / 2;
 
 				ty = int(y);
 				lx = int(x);
