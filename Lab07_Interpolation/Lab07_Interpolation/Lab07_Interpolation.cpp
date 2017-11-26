@@ -1,86 +1,80 @@
 #include "stdafx.h"
 #include <stdio.h>
 #include <windows.h>
-#include <math.h>
 #define BYTE unsigned char 
 
 int _tmain(int argc, _TCHAR* argv[])
 {
 	FILE *infile;
-	infile=fopen("Mandrill.bmp", "rb");
-	if(infile==NULL) { printf("There is no file!!!\n"); exit(1); }
+	infile = fopen("Mandrill.bmp", "rb");
+	if (infile == NULL) { printf("There is no file!!!\n"); exit(1); }
 
 	BITMAPFILEHEADER hf;
-	fread(&hf,sizeof(BITMAPFILEHEADER),1,infile);
-	if(hf.bfType!=0x4D42) exit(1); 
+	fread(&hf, sizeof(BITMAPFILEHEADER), 1, infile); // 파일헤드를 읽음 
+	if (hf.bfType != 0x4D42) exit(1);
 
 	BITMAPINFOHEADER hInfo;
-	fread(&hInfo,sizeof(BITMAPINFOHEADER),1,infile);
-	printf("Image Size: (%3dx%3d)\n",hInfo.biWidth,hInfo.biHeight);
-	printf("Pallete Type: %dbit Colors\n",hInfo.biBitCount);
+	fread(&hInfo, sizeof(BITMAPINFOHEADER), 1, infile); // 영상헤드를 읽음 
+	printf("Image Size: (%3dx%3d)\n", hInfo.biWidth, hInfo.biHeight);
+	printf("Pallete Type: %dbit Colors\n", hInfo.biBitCount);
 
-	if(hInfo.biBitCount<8 ) { printf("Bad File format!!"); exit(1); }
-	RGBQUAD *pRGB; 
-	if(hInfo.biClrUsed!=0)
+
+	// 256칼라 이하의 경우는 취급하지 않음
+	if (hInfo.biBitCount<8) { printf("Bad File format!!"); exit(1); }
+	RGBQUAD *pRGB;
+	if (hInfo.biClrUsed != 0) // 팔레트가 있는 경우 
 	{
-		pRGB= new RGBQUAD [hInfo.biClrUsed]; 
-		fread(pRGB,sizeof(RGBQUAD),hInfo.biClrUsed,infile); 
+		pRGB = new RGBQUAD[hInfo.biClrUsed]; // 팔레트의 크기만큼 메모리를 할당함 
+		fread(pRGB, sizeof(RGBQUAD), hInfo.biClrUsed, infile); // 팔레트를 파일에서 읽음 
 	}
 
-	
-	BYTE lpImg2[256][256][3];
-	fread(lpImg2,sizeof(char),hInfo.biSizeImage,infile); 
-	fclose(infile);
+	// 영상데이타를 저장할 메모리 할당 
 
+	BYTE lpImg2[256][256][3];
+	fread(lpImg2, sizeof(char), hInfo.biSizeImage, infile);
+	fclose(infile);
 	BYTE lpOutImg2[256][256][3];
 
-	float expand = 2.;
-	int lpImgLength = 256 / expand;
 
-	// backward Bipolar Interpolation
-	for(int i = 0 ; i < 256 ; i++) {
-		for(int j = 0 ; j < 256 ; j++) {
-			float from_i = i / expand;
-			float from_j = j / expand;
+	BYTE temp;
+	double x, y;
+	double int_x1, int_x2, int_y;
+	int lx, rx, ty, by;
 
-			int test_i = i / expand;
-			int test_j = j / expand;
+	for (int i = 0; i<256; i++)
+	{
+		for (int j = 0; j<256; j++)
+		{
+			for (int c = 0; c<3; c++)
+			{
+				x = double(j) / 2;
+				y = double(i) / 1;
 
-			/*if (from_i == float(test_i) && from_j == float(test_j)) {
-				for(int c = 0 ; c < 3 ; c++)
-					lpOutImg2[i][j][c] = lpImg2[int(from_i)][int(from_j)][c];
-				
+				ty = int(y);
+				lx = int(x);
+				by = ty + 1;
+				rx = lx + 1;
+
+				if (ty>-1 && ty<256 && by>-1 && by<256 && lx>-1 && lx<256 && rx>-1 && rx<256)
+				{
+					int_x1 = (rx - x)*double(lpImg2[ty][lx][c]) + (x - lx)*double(lpImg2[ty][rx][c]);
+					int_x2 = (rx - x)*double(lpImg2[by][lx][c]) + (x - lx)*double(lpImg2[by][rx][c]);
+					int_y = (by - y)*int_x1 + (y - ty)*int_x2;
+					lpOutImg2[i][j][c] = unsigned char(int_y);
+				}
 			}
-			else {*/
-				/*if (ceil(from_i) >= lpImgLength || floor(from_i) < 0 || ceil(from_j) >= lpImgLength || floor(from_j) < 0) {
-					for(int c = 0 ; c < 3 ; c++) {
-						lpOutImg2[i][j][c] = 0;
-					}
-				}*/
-				//else {
-					for(int c = 0 ; c < 3 ; c++) {
-						int high_i = ceil(from_i);
-						int low_i = floor(from_i);
 
-						float a = from_i - low_i;
-						float b = high_i - from_i;
-
-						float y1 = lpImg2[high_i][j][c]*a + lpImg2[low_i][j][c]*b;
-						float y2 = lpImg2[high_i+1][j][c]*a + lpImg2[low_i+1][j][c]*b;
-
-						lpOutImg2[i][j][c] = y1*a + y2*b;
-					}
-				//}
-			//}
 		}
 	}
-			
+
+
 	///////////////////////////////////////////////////////////////////
 
-	FILE *outfile = fopen("BipolarInterpolation.bmp","wb");
-	fwrite(&hf,sizeof(char),sizeof(BITMAPFILEHEADER),outfile);
-	fwrite(&hInfo,sizeof(char),sizeof(BITMAPINFOHEADER),outfile);
-	fwrite(lpOutImg2,sizeof(char),3*256*256, outfile); 
+	// 영상 출력 (24비트인 트루칼라로 출력) 
+	FILE *outfile = fopen("OutImg24.bmp", "wb");
+	fwrite(&hf, sizeof(char), sizeof(BITMAPFILEHEADER), outfile);
+	fwrite(&hInfo, sizeof(char), sizeof(BITMAPINFOHEADER), outfile);
+	fwrite(lpOutImg2, sizeof(char), 3 * 256 * 256, outfile);
 	fclose(outfile);
 
 	return 0;
