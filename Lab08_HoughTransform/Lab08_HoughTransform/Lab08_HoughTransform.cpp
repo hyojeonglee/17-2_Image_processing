@@ -57,10 +57,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 
 	int max = 0;
+	int rho_s = 0;
+	int theta_s = 0;
 	for(int i = 0 ; i < 256*4+1 ; i++) {
 		for(int j = 0 ; j < 100 ; j++) {
 			if (max < HT[i][j]) {
 				max = HT[i][j];
+				rho_s = i-512;
+				theta_s = j; //???
 			}
 		}
 	}
